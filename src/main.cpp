@@ -1,8 +1,8 @@
 #include <Arduino.h>
 #include <ESP32Servo.h>
 
-int motorLeftPin = 0;
-int motorRightPin = 0;
+int motorLeftPin = 18;
+int motorRightPin = 19;
 
 Servo motorLeft;
 Servo motorRight;
