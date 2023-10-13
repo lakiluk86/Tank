@@ -29,6 +29,9 @@ void setup() {
 void loop() {
   if (PS4.isConnected()) {
     Serial.println("Controller connected.");
+    if (PS4.RStickX()) {
+      Serial.printf("Right Stick x at %d\n", PS4.RStickX());
+    }
   }
 
   motorLeft.write(0);
