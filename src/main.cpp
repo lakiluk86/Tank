@@ -4,13 +4,14 @@
 
 int motorLeftPin = 18;
 int motorRightPin = 19;
+const char* controllerMAC = "fc:01:7c:f4:1a:6c";
 
 Servo motorLeft;
 Servo motorRight;
 
 void setup() {
   Serial.begin(115200);
-  PS4.begin();
+  PS4.begin(controllerMAC);
 
   ESP32PWM::allocateTimer(0);
   ESP32PWM::allocateTimer(1);
@@ -23,7 +24,7 @@ void setup() {
   motorLeft.attach(motorLeftPin);
   motorRight.attach(motorRightPin);
 
-  Serial.println("Ready.");
+  Serial.println("Waiting for connection of controller...");
 }
 
 void loop() {
