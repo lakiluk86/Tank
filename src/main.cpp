@@ -1,18 +1,33 @@
 #include <Arduino.h>
+#include <ESP32Servo.h>
 
-// put function declarations here:
-int myFunction(int, int);
+int motorLeftPin = 0;
+int motorRightPin = 0;
+
+Servo motorLeft;
+Servo motorRight;
 
 void setup() {
-  // put your setup code here, to run once:
-  int result = myFunction(2, 3);
+  ESP32PWM::allocateTimer(0);
+  ESP32PWM::allocateTimer(1);
+  ESP32PWM::allocateTimer(2);
+  ESP32PWM::allocateTimer(3);
+
+  motorLeft.setPeriodHertz(50);
+  motorRight.setPeriodHertz(50);
+
+  motorLeft.attach(motorLeftPin);
+  motorRight.attach(motorRightPin);
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-}
-
-// put function definitions here:
-int myFunction(int x, int y) {
-  return x + y;
+  motorLeft.write(0);
+  delay(2000);
+  motorLeft.write(40);
+  delay(2000);
+  motorLeft.write(80);
+  delay(2000);
+  motorLeft.write(120);
+  delay(2000);
+  motorLeft.write(160);
 }
