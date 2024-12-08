@@ -58,7 +58,7 @@ void setup() {
 }
 
 //calc drive command from axis value
-uint8_t getDriveCommand(uint8_t axis, bool left) {
+uint8_t getDriveFwdCommand(uint8_t axis, bool left) {
   uint8_t command = ((float) axis / 255.0) * MAX_SPEED;
   if (left)
   {
@@ -80,10 +80,16 @@ void loop() {
   //check axis on controller
   if (PS4.isConnected() && controller_connected == true){
     if (PS4.L2()) {
-      commandLeft = getDriveCommand(PS4.L2Value(), true);
+      commandLeft = getDriveFwdCommand(PS4.L2Value(), true);
+    }
+    else if (PS4.L1()){
+      commandLeft = 105;
     }
     if (PS4.R2()) {
-      commandRight = getDriveCommand(PS4.R2Value(), false);
+      commandRight = getDriveFwdCommand(PS4.R2Value(), false);
+    }
+    else if (PS4.R1()){
+      commandRight = 75;
     }
 
     Serial.printf("\rLeft axis: %3d | Left motor: %3d | Right axis: %3d | Right motor: %3d", PS4.L2Value(), commandLeft, PS4.R2Value(), commandRight);
