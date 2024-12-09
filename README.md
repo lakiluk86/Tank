@@ -3,8 +3,9 @@ This project realizes a RC tank, controlled by a PS4-Controller. As the controll
 ## 3D Print
 All the parts for 3D printing can be obtained on Thingiverse, https://www.thingiverse.com/thing:5069466
 ## Bluetooth
-For working bluetooth one has to set the master MAC address of the PS4-Controller to the one specified in the code. This can be done by the tool "SixAxisPairTool" for example.
-Furthermore all BT connections of the ESP have to be resettet before pairing is possible to the ESP. This is done automatically in the code.
+- For BT functionality the lib https://github.com/aed3/PS4-esp32 is used. But watch out, it is not working with newer versions of the arduino framework. So there is a local copy in the project which was modified according to https://www.youtube.com/watch?v=dRysvxQfVDw
+- For working bluetooth one has to set the master MAC address of the PS4-Controller to the one specified in the code. This can be done by the tool "SixAxisPairTool" for example.
+- Furthermore all BT connections of the ESP have to be resettet before pairing is possible to the ESP. This is done automatically in the code.
 ## Electronics
 - ESP32-NodeMCU
 - l298n motor driver board
