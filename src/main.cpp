@@ -11,14 +11,18 @@ const uint8_t MOTOR_R_DIR1_GPIO = 4;
 const uint8_t MOTOR_R_DIR2_GPIO = 5;
 
 //machine settings
-const uint8_t MAX_DRIVE_SPEED = 255;
-const uint8_t DRIVE_SPEED_BACK = 200;
+const uint8_t MAX_DRIVE_SPEED_L = 185;  //maximum drive speed left track (absolut maximum is 255)
+const uint8_t MAX_DRIVE_SPEED_R = 200;  //maximum drive speed right track (absolut maximum is 255)
+const uint8_t DRIVE_SPEED_BACK_L = 170; //fixed speed for driving backwards left track (absolut maximum is 255)
+const uint8_t DRIVE_SPEED_BACK_R = 180; //fixed speed for driving backwards right track (absolut maximum is 255)
+const uint8_t DRIVE_L_FWD_START = 160;  //duty cycle for movement start left forward
+const uint8_t DRIVE_R_FWD_START = 160;  //duty cycle for movement start right forward
 
 //PWM settings
 const int MOTOR_L_PWM_CHANNEL = 0;
 const int MOTOR_R_PWM_CHANNEL = 1;
-const int PWM_FREQ = 500;
-const int PWM_RESOLUTION = 8; //so max duty cycle is 255
+const int PWM_FREQ = 30000;
+const int PWM_RESOLUTION = 8; //max duty cycle is 255 because of this
 
 //Drive commands
 uint8_t commandLeft = 0;
@@ -65,8 +69,8 @@ void setup() {
 }
 
 //calc drive command from axis value
-uint8_t getDriveFwdCommand(uint8_t axis) {
-  return map(axis, 0, 255, 0 , MAX_DRIVE_SPEED);
+uint8_t getDriveFwdCommand(uint8_t axis, uint8_t driveStart, uint8_t maxDriveSpeed) {
+  return map(axis, 0, 255, driveStart, maxDriveSpeed);
 }
 
 //command motor driver
@@ -110,19 +114,19 @@ void loop() {
   //check axis on controller
   if (PS4.isConnected() && controller_connected == true){
     if (PS4.L2()) {
-      commandLeft = getDriveFwdCommand(PS4.L2Value());
+      commandLeft = getDriveFwdCommand(PS4.L2Value(), DRIVE_L_FWD_START, MAX_DRIVE_SPEED_L);
       directionLeft = 1;
     }
     if (PS4.L1()){
-      commandLeft = DRIVE_SPEED_BACK;
+      commandLeft = DRIVE_SPEED_BACK_L;
       directionLeft = -1;
     }
     if (PS4.R2()) {
-      commandRight = getDriveFwdCommand(PS4.R2Value());
+      commandRight = getDriveFwdCommand(PS4.R2Value(), DRIVE_R_FWD_START, MAX_DRIVE_SPEED_R);
       directionRight = 1;
     }
     if (PS4.R1()){
-      commandRight = DRIVE_SPEED_BACK;
+      commandRight = DRIVE_SPEED_BACK_R;
       directionRight = -1;
     }
 
