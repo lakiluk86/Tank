@@ -1,22 +1,34 @@
 #include <Arduino.h>
-#include <ESP32Servo.h>
 #include <PS4Controller.h>
 #include "esp_gap_bt_api.h"
 
-//drive servos and commands
-uint8_t motorLeftPin = 18;
-uint8_t motorRightPin = 19;
-Servo motorLeft;
-Servo motorRight;
-uint8_t commandLeft = 90;
-uint8_t commandRight = 90;
+//GPIO definition for drive control
+const uint8_t MOTOR_L_SPEED_GPIO = 18;
+const uint8_t MOTOR_L_DIR1_GPIO = 22;
+const uint8_t MOTOR_L_DIR2_GPIO = 23;
+const uint8_t MOTOR_R_SPEED_GPIO = 19;
+const uint8_t MOTOR_R_DIR1_GPIO = 4;
+const uint8_t MOTOR_R_DIR2_GPIO = 5;
+
+//machine settings
+const uint8_t MAX_DRIVE_SPEED = 255;
+const uint8_t DRIVE_SPEED_BACK = 200;
+
+//PWM settings
+const int MOTOR_L_PWM_CHANNEL = 0;
+const int MOTOR_R_PWM_CHANNEL = 1;
+const int PWM_FREQ = 500;
+const int PWM_RESOLUTION = 8; //so max duty cycle is 255
+
+//Drive commands
+uint8_t commandLeft = 0;
+uint8_t commandRight = 0;
+int8_t directionLeft = 0;
+int8_t directionRight = 0;
 
 //BT settings and status
 const char* BT_MAC = "7c:9e:bd:06:28:7a";
 bool controller_connected = false;
-
-//machine settings
-const float MAX_SPEED = 25.0;
 
 //unbinds all BT devices
 void unbindAllBT() {
@@ -32,44 +44,62 @@ void unbindAllBT() {
 
 //ESP32 setup function
 void setup() {
-  Serial.begin(115200);
-  PS4.begin(BT_MAC);
+  Serial.begin(115200); //setup serial monitor
+  
+  PS4.begin(BT_MAC);  //setup BT on MAC adress which is predefined on controller by SixAxisPairTool
+  unbindAllBT();  //unbind all earlier BT devices
 
-  //unbind all earlier BT devices
-  unbindAllBT();
+  //init digital drive GPIOs
+  pinMode(MOTOR_L_DIR1_GPIO, OUTPUT);
+  pinMode(MOTOR_L_DIR2_GPIO, OUTPUT);
+  pinMode(MOTOR_R_DIR1_GPIO, OUTPUT);
+  pinMode(MOTOR_R_DIR2_GPIO, OUTPUT);
 
-  //start timers for PWM
-  ESP32PWM::allocateTimer(0);
-  ESP32PWM::allocateTimer(1);
-  ESP32PWM::allocateTimer(2);
-  ESP32PWM::allocateTimer(3);
-
-  //setup PWM outputs for drive
-  motorLeft.setPeriodHertz(50);
-  motorRight.setPeriodHertz(50);
-  motorLeft.attach(motorLeftPin);
-  motorRight.attach(motorRightPin);
-
-  //reset drive to zero speed
-  motorLeft.write(90);
-  motorRight.write(90);
+  //init pwm outputs drive
+  ledcSetup(MOTOR_L_PWM_CHANNEL, PWM_FREQ, PWM_RESOLUTION);
+  ledcSetup(MOTOR_R_PWM_CHANNEL, PWM_FREQ, PWM_RESOLUTION);
+  ledcAttachPin(MOTOR_L_SPEED_GPIO, MOTOR_L_PWM_CHANNEL);
+  ledcAttachPin(MOTOR_R_SPEED_GPIO, MOTOR_R_PWM_CHANNEL);
 
   Serial.println("Waiting for connection of PS4 controller...");
 }
 
 //calc drive command from axis value
-uint8_t getDriveFwdCommand(uint8_t axis, bool left) {
-  uint8_t command = ((float) axis / 255.0) * MAX_SPEED;
-  if (left)
-  {
-    return 90 - command;
-  }
-  return 90 + command;
+uint8_t getDriveFwdCommand(uint8_t axis) {
+  return map(axis, 0, 255, 0 , MAX_DRIVE_SPEED);
 }
 
+//command motor driver
+void commandMotor(uint8_t speed, uint8_t pwmChannel, int8_t dir, uint8_t dir1GPIO, uint8_t dir2GPIO) {
+  //set direction
+  switch (dir)
+  {
+    case 1:
+      digitalWrite(dir1GPIO, 1);
+      digitalWrite(dir2GPIO, 0);
+      break;
+      
+    case -1:
+      digitalWrite(dir1GPIO, 0);
+      digitalWrite(dir2GPIO, 1);
+      break;
+
+    default:
+      digitalWrite(dir1GPIO, 0);
+      digitalWrite(dir2GPIO, 0);
+      break;
+  }
+
+  //set speed
+  ledcWrite(pwmChannel, speed);
+}
+
+//main program loop
 void loop() {
-  commandLeft = 90;
-  commandRight = 90;
+  commandLeft = 0;
+  commandRight = 0;
+  directionLeft = 0;
+  directionRight = 0;
 
   //check first BT connection of controller
   if (PS4.isConnected() && controller_connected == false) {
@@ -80,21 +110,26 @@ void loop() {
   //check axis on controller
   if (PS4.isConnected() && controller_connected == true){
     if (PS4.L2()) {
-      commandLeft = getDriveFwdCommand(PS4.L2Value(), true);
+      commandLeft = getDriveFwdCommand(PS4.L2Value());
+      directionLeft = 1;
     }
-    else if (PS4.L1()){
-      commandLeft = 105;
+    if (PS4.L1()){
+      commandLeft = DRIVE_SPEED_BACK;
+      directionLeft = -1;
     }
     if (PS4.R2()) {
-      commandRight = getDriveFwdCommand(PS4.R2Value(), false);
+      commandRight = getDriveFwdCommand(PS4.R2Value());
+      directionRight = 1;
     }
-    else if (PS4.R1()){
-      commandRight = 75;
+    if (PS4.R1()){
+      commandRight = DRIVE_SPEED_BACK;
+      directionRight = -1;
     }
 
-    Serial.printf("\rLeft axis: %3d | Left motor: %3d | Right axis: %3d | Right motor: %3d", PS4.L2Value(), commandLeft, PS4.R2Value(), commandRight);
+    Serial.printf("\rLeft axis/cmd/dir: %3d - %3d - %3d | Right axis/cmd/dir: %3d - %3d - %3d", PS4.L2Value(), commandLeft, directionLeft, PS4.R2Value(), commandRight, directionRight);
   }
 
-  motorLeft.write(commandLeft);
-  motorRight.write(commandRight);
+  //command drive motors
+  commandMotor(commandLeft, MOTOR_L_PWM_CHANNEL, directionLeft, MOTOR_L_DIR1_GPIO, MOTOR_L_DIR2_GPIO);
+  commandMotor(commandRight, MOTOR_R_PWM_CHANNEL, directionRight, MOTOR_R_DIR1_GPIO, MOTOR_R_DIR2_GPIO);
 }
