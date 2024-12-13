@@ -8,5 +8,6 @@ All the parts for 3D printing can be obtained on Thingiverse, https://www.thingi
 - Furthermore all BT connections of the ESP have to be resettet before pairing is possible to the ESP. This is done automatically in the code.
 ## Electronics
 - ESP32-NodeMCU
-- l298n motor driver board
-- 5-12V battery
+- 2x BTS7960 Dual H-Bridge Stepper Motor Driver
+- LM2596S Step down converter
+- 7-12V battery
