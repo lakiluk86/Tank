@@ -9,10 +9,10 @@ const uint8_t MOTOR_R_1_GPIO = 19;
 const uint8_t MOTOR_R_2_GPIO = 18;
 
 //machine settings
-const uint8_t MAX_DRIVE_SPEED_L = 255;  //maximum drive speed left track (duty cycle, absolut maximum is 255)
-const uint8_t MAX_DRIVE_SPEED_R = 255;  //maximum drive speed right track (duty cycle, absolut maximum is 255)
-const uint8_t DRIVE_SPEED_BACK_L = 200; //fixed speed for driving backwards left track (duty cycle, absolut maximum is 255)
-const uint8_t DRIVE_SPEED_BACK_R = 200; //fixed speed for driving backwards right track (duty cycle, absolut maximum is 255)
+const uint8_t MAX_DRIVE_SPEED_L = 90;  //maximum drive speed left track (duty cycle, absolut maximum is 255)
+const uint8_t MAX_DRIVE_SPEED_R = 90;  //maximum drive speed right track (duty cycle, absolut maximum is 255)
+const uint8_t DRIVE_SPEED_BACK_L = 80; //fixed speed for driving backwards left track (duty cycle, absolut maximum is 255)
+const uint8_t DRIVE_SPEED_BACK_R = 80; //fixed speed for driving backwards right track (duty cycle, absolut maximum is 255)
 const uint8_t DRIVE_L_FWD_START = 0;  //duty cycle for movement start left forward
 const uint8_t DRIVE_R_FWD_START = 0;  //duty cycle for movement start right forward
 
@@ -113,11 +113,11 @@ void loop() {
   if (PS4.isConnected() && controller_connected == true){
     if (PS4.L2()) {
       driveCmdLeft = getDriveFwdCommand(PS4.L2Value(), DRIVE_L_FWD_START, MAX_DRIVE_SPEED_L);
-      driveDirLeft = 1;
+      driveDirLeft = -1;
     }
     if (PS4.L1()){
       driveCmdLeft = DRIVE_SPEED_BACK_L;
-      driveDirLeft = -1;
+      driveDirLeft = 1;
     }
     if (PS4.R2()) {
       driveCmdRight = getDriveFwdCommand(PS4.R2Value(), DRIVE_R_FWD_START, MAX_DRIVE_SPEED_R);
