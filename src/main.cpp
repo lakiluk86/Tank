@@ -1,12 +1,14 @@
 #include <Arduino.h>
 #include <PS4Controller.h>
+#include <ESP32Servo.h>
 #include "esp_gap_bt_api.h"
 
-//GPIO definition for drive control
+//GPIO definitions
 const uint8_t MOTOR_L_1_GPIO = 23;
 const uint8_t MOTOR_L_2_GPIO = 22;
 const uint8_t MOTOR_R_1_GPIO = 19;
 const uint8_t MOTOR_R_2_GPIO = 18;
+const uint8_t TURRENT_ROTATE_GPIO = 5;
 
 //machine settings
 const uint8_t MAX_DRIVE_SPEED_L = 90;  //maximum drive speed left track (duty cycle, absolut maximum is 255)
@@ -16,7 +18,7 @@ const uint8_t DRIVE_SPEED_BACK_R = 80; //fixed speed for driving backwards right
 const uint8_t DRIVE_L_FWD_START = 0;  //duty cycle for movement start left forward
 const uint8_t DRIVE_R_FWD_START = 0;  //duty cycle for movement start right forward
 
-//PWM settings
+//PWM settings for drive control
 const int MOTOR_L_1_PWM_CHANNEL = 0;
 const int MOTOR_L_2_PWM_CHANNEL = 1;
 const int MOTOR_R_1_PWM_CHANNEL = 2;
@@ -24,11 +26,15 @@ const int MOTOR_R_2_PWM_CHANNEL = 3;
 const int PWM_FREQ = 30000;
 const int PWM_RESOLUTION = 8; //max duty cycle is 255 because of this resolution
 
-//Drive commands
+//Servos for turrent
+Servo turrentRotate;
+
+//Commands for driving and servos
 uint8_t driveCmdLeft = 0;
 uint8_t driveCmdRight = 0;
 int8_t driveDirLeft = 0;
 int8_t driveDirRight = 0;
+uint8_t turrentRotateCmd = 90;
 
 //BT settings and status
 const char* BT_MAC = "7c:9e:bd:06:28:7a";
@@ -62,6 +68,14 @@ void setup() {
   ledcAttachPin(MOTOR_L_2_GPIO, MOTOR_L_2_PWM_CHANNEL);
   ledcAttachPin(MOTOR_R_1_GPIO, MOTOR_R_1_PWM_CHANNEL);
   ledcAttachPin(MOTOR_R_2_GPIO, MOTOR_R_2_PWM_CHANNEL);
+
+  //Allocation of all timers for servo library
+	ESP32PWM::allocateTimer(0);
+	ESP32PWM::allocateTimer(1);
+	ESP32PWM::allocateTimer(2);
+	ESP32PWM::allocateTimer(3);
+	turrentRotate.setPeriodHertz(50);
+	turrentRotate.attach(TURRENT_ROTATE_GPIO, 500, 2400);
 
   Serial.println("Waiting for connection of PS4 controller...");
 }
@@ -102,6 +116,7 @@ void loop() {
   driveCmdRight = 0;
   driveDirLeft = 0;
   driveDirRight = 0;
+  turrentRotateCmd = 90;
 
   //check first BT connection of controller
   if (PS4.isConnected() && controller_connected == false) {
@@ -111,7 +126,8 @@ void loop() {
 
   //check axis on controller
   if (PS4.isConnected() && controller_connected == true){
-    if (PS4.L2()) {
+    //check drive controls
+    if (PS4.L2()){
       driveCmdLeft = getDriveFwdCommand(PS4.L2Value(), DRIVE_L_FWD_START, MAX_DRIVE_SPEED_L);
       driveDirLeft = -1;
     }
@@ -119,7 +135,7 @@ void loop() {
       driveCmdLeft = DRIVE_SPEED_BACK_L;
       driveDirLeft = 1;
     }
-    if (PS4.R2()) {
+    if (PS4.R2()){
       driveCmdRight = getDriveFwdCommand(PS4.R2Value(), DRIVE_R_FWD_START, MAX_DRIVE_SPEED_R);
       driveDirRight = 1;
     }
@@ -128,10 +144,19 @@ void loop() {
       driveDirRight = -1;
     }
 
+    //check turrent controls
+    if (PS4.RStickX()){
+      Serial.printf("\rRight stick x: %3d", PS4.RStickX());
+      turrentRotateCmd = map(PS4.RStickX(), -255, 255, -90, 90);
+    }
+
     Serial.printf("\rLeft axis/cmd/dir: %3d - %3d - %3d | Right axis/cmd/dir: %3d - %3d - %3d", PS4.L2Value(), driveCmdLeft, driveDirLeft, PS4.R2Value(), driveCmdRight, driveDirRight);
   }
 
   //command drive motors
   commandMotor(driveCmdLeft, driveDirLeft, MOTOR_L_1_PWM_CHANNEL, MOTOR_L_2_PWM_CHANNEL);
   commandMotor(driveCmdRight, driveDirRight, MOTOR_R_1_PWM_CHANNEL, MOTOR_R_2_PWM_CHANNEL);
+
+  //command servos
+  turrentRotate.write(turrentRotateCmd);
 }
