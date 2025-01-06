@@ -11,12 +11,13 @@ const uint8_t TURRENT_ROTATE_GPIO = 5;
 const uint8_t TURRENT_ELEVATE_GPIO = 4;
 
 //machine settings
-const uint8_t MAX_DRIVE_SPEED_L = 90;  //maximum drive speed left track (duty cycle, absolut maximum is 255)
-const uint8_t MAX_DRIVE_SPEED_R = 90;  //maximum drive speed right track (duty cycle, absolut maximum is 255)
-const uint8_t DRIVE_SPEED_BACK_L = 80; //fixed speed for driving backwards left track (duty cycle, absolut maximum is 255)
-const uint8_t DRIVE_SPEED_BACK_R = 80; //fixed speed for driving backwards right track (duty cycle, absolut maximum is 255)
+const uint8_t MAX_DRIVE_SPEED_L = 75;  //maximum drive speed left track (duty cycle, absolut maximum is 255)
+const uint8_t MAX_DRIVE_SPEED_R = 75;  //maximum drive speed right track (duty cycle, absolut maximum is 255)
+const uint8_t DRIVE_SPEED_BACK_L = 60; //fixed speed for driving backwards left track (duty cycle, absolut maximum is 255)
+const uint8_t DRIVE_SPEED_BACK_R = 60; //fixed speed for driving backwards right track (duty cycle, absolut maximum is 255)
 const uint8_t TURRENT_ROTATE_STOP = 19; //duty cycle for middle position of servo for rotating turrent
-const uint8_t TURRENT_JOY_DEATHBAND = 40; //deathband of left joystick axis for rotating and elevating turrent
+const uint8_t DRIVE_JOY_DEATHBAND = 40; //deathband of left joystick axis for driving
+const uint8_t TURRENT_JOY_DEATHBAND = 40; //deathband of right joystick axis for rotating and elevating turrent
 const uint8_t TURRENT_ELEVATE_MIN = 8; //minimum duty cycle for turrent elevation
 const uint8_t TURRENT_ELEVATE_MAX = 30; //maximum duty cycle for turrent elevation
 const uint8_t TURRENT_ELEVATE_DFLT = TURRENT_ELEVATE_MIN + (TURRENT_ELEVATE_MAX - TURRENT_ELEVATE_MIN) / 2;
@@ -81,9 +82,9 @@ void setup() {
   Serial.println("Waiting for connection of PS4 controller...");
 }
 
-//calc drive command from axis value
-uint8_t getDriveFwdCommand(uint8_t axis, uint8_t driveStart, uint8_t maxDriveSpeed) {
-  return map(axis, 0, 255, driveStart, maxDriveSpeed);
+//calc drive command from L2 or R2 value
+uint8_t getDriveCommand(uint8_t axis, uint8_t maxDriveSpeed) {
+  return map(axis, 0, 255, 0, maxDriveSpeed);
 }
 
 //command motor driver
@@ -127,9 +128,9 @@ void loop() {
 
   //check axis on controller
   if (PS4.isConnected() && controller_connected == true){
-    //check drive controls
+    //check drive controls (driving is possible by L1/2 and R1/2 or by left joystick)
     if (PS4.L2()){
-      driveCmdLeft = getDriveFwdCommand(PS4.L2Value(), 0, MAX_DRIVE_SPEED_L);
+      driveCmdLeft = getDriveCommand(PS4.L2Value(), MAX_DRIVE_SPEED_L);
       driveDirLeft = -1;
     }
     if (PS4.L1()){
@@ -137,7 +138,7 @@ void loop() {
       driveDirLeft = 1;
     }
     if (PS4.R2()){
-      driveCmdRight = getDriveFwdCommand(PS4.R2Value(), 0, MAX_DRIVE_SPEED_R);
+      driveCmdRight = getDriveCommand(PS4.R2Value(), MAX_DRIVE_SPEED_R);
       driveDirRight = 1;
     }
     if (PS4.R1()){
@@ -145,7 +146,7 @@ void loop() {
       driveDirRight = -1;
     }
 
-    //check turrent controls
+    //check turrent controls (control by right joystick)
     if (abs(PS4.RStickX()) >= TURRENT_JOY_DEATHBAND){
       //this servo has a very narrow working duty cycle because of modification to endless servo movement
       turrentRotateCmd = map(PS4.RStickX(), -127, 127, TURRENT_ROTATE_STOP - 5, TURRENT_ROTATE_STOP + 5);
