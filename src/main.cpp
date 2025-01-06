@@ -15,12 +15,11 @@ const uint8_t MAX_DRIVE_SPEED_L = 90;  //maximum drive speed left track (duty cy
 const uint8_t MAX_DRIVE_SPEED_R = 90;  //maximum drive speed right track (duty cycle, absolut maximum is 255)
 const uint8_t DRIVE_SPEED_BACK_L = 80; //fixed speed for driving backwards left track (duty cycle, absolut maximum is 255)
 const uint8_t DRIVE_SPEED_BACK_R = 80; //fixed speed for driving backwards right track (duty cycle, absolut maximum is 255)
-const uint8_t DRIVE_L_FWD_START = 0;  //duty cycle for movement start left forward
-const uint8_t DRIVE_R_FWD_START = 0;  //duty cycle for movement start right forward
 const uint8_t TURRENT_ROTATE_STOP = 19; //duty cycle for middle position of servo for rotating turrent
-const uint8_t TURRENT_ROTATE_DEATHBAND = 40; //deathband of left joystick axis for rotating turrent
-const uint8_t TURRENT_ELEVATE_MIN = 0; //minimum duty cycle for turrent elevation
-const uint8_t TURRENT_ELEVATE_MAX = 255; //maximum duty cycle for turrent elevation
+const uint8_t TURRENT_JOY_DEATHBAND = 40; //deathband of left joystick axis for rotating and elevating turrent
+const uint8_t TURRENT_ELEVATE_MIN = 8; //minimum duty cycle for turrent elevation
+const uint8_t TURRENT_ELEVATE_MAX = 30; //maximum duty cycle for turrent elevation
+const uint8_t TURRENT_ELEVATE_DFLT = TURRENT_ELEVATE_MIN + (TURRENT_ELEVATE_MAX - TURRENT_ELEVATE_MIN) / 2;
 
 //PWM settings for drive control and servos
 const int MOTOR_L_1_PWM_CHANNEL = 0;
@@ -39,7 +38,8 @@ uint8_t driveCmdRight = 0;
 int8_t driveDirLeft = 0;
 int8_t driveDirRight = 0;
 uint8_t turrentRotateCmd = 0;
-uint8_t turrentElevateCmd = 0;
+uint8_t turrentElevateCmd = TURRENT_ELEVATE_DFLT;
+long elevationTimestamp = 0;
 
 //BT settings and status
 const char* BT_MAC = "7c:9e:bd:06:28:7a";
@@ -118,7 +118,6 @@ void loop() {
   driveDirLeft = 0;
   driveDirRight = 0;
   turrentRotateCmd = TURRENT_ROTATE_STOP;
-  turrentElevateCmd = (TURRENT_ELEVATE_MAX - TURRENT_ELEVATE_MIN) / 2;
 
   //check first BT connection of controller
   if (PS4.isConnected() && controller_connected == false) {
@@ -130,7 +129,7 @@ void loop() {
   if (PS4.isConnected() && controller_connected == true){
     //check drive controls
     if (PS4.L2()){
-      driveCmdLeft = getDriveFwdCommand(PS4.L2Value(), DRIVE_L_FWD_START, MAX_DRIVE_SPEED_L);
+      driveCmdLeft = getDriveFwdCommand(PS4.L2Value(), 0, MAX_DRIVE_SPEED_L);
       driveDirLeft = -1;
     }
     if (PS4.L1()){
@@ -138,7 +137,7 @@ void loop() {
       driveDirLeft = 1;
     }
     if (PS4.R2()){
-      driveCmdRight = getDriveFwdCommand(PS4.R2Value(), DRIVE_R_FWD_START, MAX_DRIVE_SPEED_R);
+      driveCmdRight = getDriveFwdCommand(PS4.R2Value(), 0, MAX_DRIVE_SPEED_R);
       driveDirRight = 1;
     }
     if (PS4.R1()){
@@ -147,11 +146,21 @@ void loop() {
     }
 
     //check turrent controls
-    if (abs(PS4.RStickX()) >= TURRENT_ROTATE_DEATHBAND){
+    if (abs(PS4.RStickX()) >= TURRENT_JOY_DEATHBAND){
+      //this servo has a very narrow working duty cycle because of modification to endless servo movement
       turrentRotateCmd = map(PS4.RStickX(), -127, 127, TURRENT_ROTATE_STOP - 5, TURRENT_ROTATE_STOP + 5);
     }
-    if (abs(PS4.RStickY()) >= TURRENT_ROTATE_DEATHBAND){
-      turrentElevateCmd = map(PS4.RStickY(), -127, 127, TURRENT_ELEVATE_MIN, TURRENT_ELEVATE_MAX);
+    if (abs(PS4.RStickY()) >= TURRENT_JOY_DEATHBAND && (millis() - elevationTimestamp > 50)){
+      if (PS4.RStickY() > 0){
+        turrentElevateCmd++;
+
+      }
+      else {
+        turrentElevateCmd--;
+      }
+      turrentElevateCmd = min(turrentElevateCmd, TURRENT_ELEVATE_MAX);
+      turrentElevateCmd = max(turrentElevateCmd, TURRENT_ELEVATE_MIN);
+      elevationTimestamp = millis();
     }
 
     //Debugging
