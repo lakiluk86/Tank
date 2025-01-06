@@ -8,6 +8,7 @@ const uint8_t MOTOR_L_2_GPIO = 22;
 const uint8_t MOTOR_R_1_GPIO = 19;
 const uint8_t MOTOR_R_2_GPIO = 18;
 const uint8_t TURRENT_ROTATE_GPIO = 5;
+const uint8_t TURRENT_ELEVATE_GPIO = 4;
 
 //machine settings
 const uint8_t MAX_DRIVE_SPEED_L = 90;  //maximum drive speed left track (duty cycle, absolut maximum is 255)
@@ -18,6 +19,8 @@ const uint8_t DRIVE_L_FWD_START = 0;  //duty cycle for movement start left forwa
 const uint8_t DRIVE_R_FWD_START = 0;  //duty cycle for movement start right forward
 const uint8_t TURRENT_ROTATE_STOP = 19; //duty cycle for middle position of servo for rotating turrent
 const uint8_t TURRENT_ROTATE_DEATHBAND = 40; //deathband of left joystick axis for rotating turrent
+const uint8_t TURRENT_ELEVATE_MIN = 0; //minimum duty cycle for turrent elevation
+const uint8_t TURRENT_ELEVATE_MAX = 255; //maximum duty cycle for turrent elevation
 
 //PWM settings for drive control and servos
 const int MOTOR_L_1_PWM_CHANNEL = 0;
@@ -25,6 +28,7 @@ const int MOTOR_L_2_PWM_CHANNEL = 1;
 const int MOTOR_R_1_PWM_CHANNEL = 2;
 const int MOTOR_R_2_PWM_CHANNEL = 3;
 const int TURRENT_ROTATE_PWM_CHANNEL = 4;
+const int TURRENT_ELEVATE_PWM_CHANNEL = 5;
 const int PWM_FREQ_DRIVE = 30000; //pwm frequency for drive control
 const int PWM_FREQ_SERVO = 50; //pwm frequency for servos
 const int PWM_RESOLUTION = 8; //max duty cycle is 255 because of this resolution
@@ -35,6 +39,7 @@ uint8_t driveCmdRight = 0;
 int8_t driveDirLeft = 0;
 int8_t driveDirRight = 0;
 uint8_t turrentRotateCmd = 0;
+uint8_t turrentElevateCmd = 0;
 
 //BT settings and status
 const char* BT_MAC = "7c:9e:bd:06:28:7a";
@@ -65,11 +70,13 @@ void setup() {
   ledcSetup(MOTOR_R_1_PWM_CHANNEL, PWM_FREQ_DRIVE, PWM_RESOLUTION);
   ledcSetup(MOTOR_R_2_PWM_CHANNEL, PWM_FREQ_DRIVE, PWM_RESOLUTION);
   ledcSetup(TURRENT_ROTATE_PWM_CHANNEL, PWM_FREQ_SERVO, PWM_RESOLUTION);
+  ledcSetup(TURRENT_ELEVATE_PWM_CHANNEL, PWM_FREQ_SERVO, PWM_RESOLUTION);
   ledcAttachPin(MOTOR_L_1_GPIO, MOTOR_L_1_PWM_CHANNEL);
   ledcAttachPin(MOTOR_L_2_GPIO, MOTOR_L_2_PWM_CHANNEL);
   ledcAttachPin(MOTOR_R_1_GPIO, MOTOR_R_1_PWM_CHANNEL);
   ledcAttachPin(MOTOR_R_2_GPIO, MOTOR_R_2_PWM_CHANNEL);
   ledcAttachPin(TURRENT_ROTATE_GPIO, TURRENT_ROTATE_PWM_CHANNEL);
+  ledcAttachPin(TURRENT_ELEVATE_GPIO, TURRENT_ELEVATE_PWM_CHANNEL);
 
   Serial.println("Waiting for connection of PS4 controller...");
 }
@@ -111,6 +118,7 @@ void loop() {
   driveDirLeft = 0;
   driveDirRight = 0;
   turrentRotateCmd = TURRENT_ROTATE_STOP;
+  turrentElevateCmd = (TURRENT_ELEVATE_MAX - TURRENT_ELEVATE_MIN) / 2;
 
   //check first BT connection of controller
   if (PS4.isConnected() && controller_connected == false) {
@@ -142,8 +150,12 @@ void loop() {
     if (abs(PS4.RStickX()) >= TURRENT_ROTATE_DEATHBAND){
       turrentRotateCmd = map(PS4.RStickX(), -127, 127, TURRENT_ROTATE_STOP - 5, TURRENT_ROTATE_STOP + 5);
     }
+    if (abs(PS4.RStickY()) >= TURRENT_ROTATE_DEATHBAND){
+      turrentElevateCmd = map(PS4.RStickY(), -127, 127, TURRENT_ELEVATE_MIN, TURRENT_ELEVATE_MAX);
+    }
 
-    Serial.printf("\rRight stick x/y/cmdx: %3d - %3d - %3d | Left axis/cmd/dir: %3d - %3d - %3d | Right axis/cmd/dir: %3d - %3d - %3d", PS4.RStickX(), PS4.RStickY(), turrentRotateCmd, PS4.L2Value(), driveCmdLeft, driveDirLeft, PS4.R2Value(), driveCmdRight, driveDirRight);
+    //Debugging
+    Serial.printf("\rRight stick x/y/cmdx/cmdy: %3d - %3d - %3d - %3d | Left axis/cmd/dir: %3d - %3d - %3d | Right axis/cmd/dir: %3d - %3d - %3d", PS4.RStickX(), PS4.RStickY(), turrentRotateCmd, turrentElevateCmd, PS4.L2Value(), driveCmdLeft, driveDirLeft, PS4.R2Value(), driveCmdRight, driveDirRight);
   }
 
   //command drive motors
@@ -152,4 +164,5 @@ void loop() {
 
   //command servos
   ledcWrite(TURRENT_ROTATE_PWM_CHANNEL, turrentRotateCmd);
+  ledcWrite(TURRENT_ELEVATE_PWM_CHANNEL, turrentElevateCmd);
 }
