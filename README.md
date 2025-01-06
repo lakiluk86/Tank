@@ -13,4 +13,4 @@ This project realizes a RC tank, controlled by a PS4-Controller. As the controll
 - LM2596S Step down converter
 - LiPo 11.2V battery
 - Shooting unit for HengLong tanks V6 with barrel recoil, see also picture in doc directory
-- - the shaft at the end of the unit has to be removed, so that the unit fits in the turrent when barrel is pointing downwards
+  - the shaft at the end of the unit has to be removed, so that the unit fits in the turrent when barrel is pointing downwards
