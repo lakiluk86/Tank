@@ -9,6 +9,7 @@ const uint8_t MOTOR_R_1_GPIO = 19;
 const uint8_t MOTOR_R_2_GPIO = 18;
 const uint8_t TURRENT_ROTATE_GPIO = 5;
 const uint8_t TURRENT_ELEVATE_GPIO = 4;
+const uint8_t TURRENT_SHOOT_GPIO = 2;
 
 //machine settings
 const uint8_t MAX_DRIVE_SPEED_L = 75;  //maximum drive speed left track (duty cycle, absolut maximum is 255)
@@ -41,6 +42,7 @@ int8_t driveDirRight = 0;
 uint8_t turrentRotateCmd = 0;
 uint8_t turrentElevateCmd = TURRENT_ELEVATE_DFLT;
 long elevationTimestamp = 0;
+uint8_t shootCmd = LOW;
 
 //BT settings and status
 const char* BT_MAC = "7c:9e:bd:06:28:7a";
@@ -78,6 +80,9 @@ void setup() {
   ledcAttachPin(MOTOR_R_2_GPIO, MOTOR_R_2_PWM_CHANNEL);
   ledcAttachPin(TURRENT_ROTATE_GPIO, TURRENT_ROTATE_PWM_CHANNEL);
   ledcAttachPin(TURRENT_ELEVATE_GPIO, TURRENT_ELEVATE_PWM_CHANNEL);
+
+  //setup shooting output pin
+  pinMode(TURRENT_SHOOT_GPIO, OUTPUT);
 
   Serial.println("Waiting for connection of PS4 controller...");
 }
@@ -118,6 +123,7 @@ void loop() {
   driveCmdRight = 0;
   driveDirLeft = 0;
   driveDirRight = 0;
+  shootCmd = LOW;
   turrentRotateCmd = TURRENT_ROTATE_STOP;
 
   //check first BT connection of controller
@@ -164,6 +170,12 @@ void loop() {
       elevationTimestamp = millis();
     }
 
+    //check shooting controls
+    if (PS4.Cross()){
+      shootCmd = HIGH;
+      Serial.println("Shooting");
+    }
+
     //Debugging
     Serial.printf("\rRight stick x/y/cmdx/cmdy: %3d - %3d - %3d - %3d | Left axis/cmd/dir: %3d - %3d - %3d | Right axis/cmd/dir: %3d - %3d - %3d", PS4.RStickX(), PS4.RStickY(), turrentRotateCmd, turrentElevateCmd, PS4.L2Value(), driveCmdLeft, driveDirLeft, PS4.R2Value(), driveCmdRight, driveDirRight);
   }
@@ -175,4 +187,7 @@ void loop() {
   //command servos
   ledcWrite(TURRENT_ROTATE_PWM_CHANNEL, turrentRotateCmd);
   ledcWrite(TURRENT_ELEVATE_PWM_CHANNEL, turrentElevateCmd);
+
+  //command shooting
+  digitalWrite(TURRENT_SHOOT_GPIO, shootCmd);
 }
