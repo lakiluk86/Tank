@@ -12,10 +12,10 @@ const uint8_t TURRENT_ELEVATE_GPIO = 4;
 const uint8_t TURRENT_SHOOT_GPIO = 2;
 
 //machine settings
-const uint8_t MAX_DRIVE_SPEED_L = 75;  //maximum drive speed left track (duty cycle, absolut maximum is 255)
-const uint8_t MAX_DRIVE_SPEED_R = 75;  //maximum drive speed right track (duty cycle, absolut maximum is 255)
-const uint8_t DRIVE_SPEED_BACK_L = 60; //fixed speed for driving backwards left track (duty cycle, absolut maximum is 255)
-const uint8_t DRIVE_SPEED_BACK_R = 60; //fixed speed for driving backwards right track (duty cycle, absolut maximum is 255)
+const uint8_t MAX_DRIVE_SPEED_L = 85;  //maximum drive speed left track (duty cycle, absolut maximum is 255)
+const uint8_t MAX_DRIVE_SPEED_R = 85;  //maximum drive speed right track (duty cycle, absolut maximum is 255)
+const uint8_t DRIVE_SPEED_BACK_L = 70; //fixed speed for driving backwards left track (duty cycle, absolut maximum is 255)
+const uint8_t DRIVE_SPEED_BACK_R = 70; //fixed speed for driving backwards right track (duty cycle, absolut maximum is 255)
 const uint8_t TURRENT_ROTATE_STOP = 19; //duty cycle for middle position of servo for rotating turrent
 const uint8_t DRIVE_JOY_DEATHBAND = 40; //deathband of left joystick axis for driving
 const uint8_t TURRENT_JOY_DEATHBAND = 40; //deathband of right joystick axis for rotating and elevating turrent
@@ -42,6 +42,8 @@ int8_t driveDirRight = 0;
 uint8_t turrentRotateCmd = 0;
 uint8_t turrentElevateCmd = TURRENT_ELEVATE_DFLT;
 long elevationTimestamp = 0;
+bool turrentElevateUp = false;
+bool turrentElevateDown = false;
 uint8_t shootCmd = LOW;
 
 //BT settings and status
@@ -134,7 +136,8 @@ void loop() {
 
   //check axis on controller
   if (PS4.isConnected() && controller_connected == true){
-    //check drive controls (driving is possible by L1/2 and R1/2 or by left joystick)
+
+    //check drive controls (driving is done by L1/2 and R1/2)
     if (PS4.L2()){
       driveCmdLeft = getDriveCommand(PS4.L2Value(), MAX_DRIVE_SPEED_L);
       driveDirLeft = -1;
@@ -152,15 +155,16 @@ void loop() {
       driveDirRight = -1;
     }
 
-    //check turrent controls (control by right joystick)
+    //check turrent control rotation
     if (abs(PS4.RStickX()) >= TURRENT_JOY_DEATHBAND){
       //this servo has a very narrow working duty cycle because of modification to endless servo movement
-      turrentRotateCmd = map(PS4.RStickX(), -127, 127, TURRENT_ROTATE_STOP - 5, TURRENT_ROTATE_STOP + 5);
+      turrentRotateCmd = map(PS4.RStickX(), -127, 127, TURRENT_ROTATE_STOP + 5, TURRENT_ROTATE_STOP - 5);
     }
+
+    //check turrent control elevation by right joystick
     if (abs(PS4.RStickY()) >= TURRENT_JOY_DEATHBAND && (millis() - elevationTimestamp > 50)){
       if (PS4.RStickY() > 0){
         turrentElevateCmd++;
-
       }
       else {
         turrentElevateCmd--;
@@ -170,14 +174,30 @@ void loop() {
       elevationTimestamp = millis();
     }
 
-    //check shooting controls
-    if (PS4.Cross()){
-      shootCmd = HIGH;
-      Serial.println("Shooting");
+    //check turrent control elevation by up/down buttons
+    if (PS4.Up()){
+      if(turrentElevateUp == false){
+        turrentElevateCmd++;
+        turrentElevateUp = true;
+      }
+    }
+    else {
+      turrentElevateUp = false;
+    }
+    if (PS4.Down()){
+      if(turrentElevateDown == false){
+        turrentElevateCmd--;
+        turrentElevateDown = true;
+      }
+    }
+    else {
+      turrentElevateDown = false;
     }
 
-    //Debugging
-    Serial.printf("\rRight stick x/y/cmdx/cmdy: %3d - %3d - %3d - %3d | Left axis/cmd/dir: %3d - %3d - %3d | Right axis/cmd/dir: %3d - %3d - %3d", PS4.RStickX(), PS4.RStickY(), turrentRotateCmd, turrentElevateCmd, PS4.L2Value(), driveCmdLeft, driveDirLeft, PS4.R2Value(), driveCmdRight, driveDirRight);
+    //check shooting control
+    if (PS4.Cross()){
+      shootCmd = HIGH;
+    }
   }
 
   //command drive motors
