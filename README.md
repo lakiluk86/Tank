@@ -19,3 +19,12 @@ This project realizes a RC tank, controlled by a PS4-Controller. As the controll
 - The servo for rotating the turrent was modified so that it can turn endless (see https://youtu.be/JhHSXCLsN4k?si=Jbtp7p6A8w-mFTv1 for example)
 - Shooting unit for HengLong tanks V6 with barrel recoil, see also picture in doc directory
   - the shaft at the rear end of the unit has to be removed, so that the unit fits in the turrent when barrel is pointing downwards
+## Controls on PS4-Controller
+- L2/R2 for driving left/right track forward
+- L1/R1 for driving left/right track backward
+- Right joystick for adjusting turrent
+  - x-Axis is rotating
+  - y-Axis is elevation
+- Up/Down Buttons for fine adjustments of elevation
+- Left/Right Buttons for fine adjustments of rotation
+- X for shooting
